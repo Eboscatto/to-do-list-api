@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.autentication;
+package br.com.eboscatto.todolist.authentication;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import br.com.eboscatto.todolist.repository.IUserRepository;
@@ -25,7 +25,7 @@ public class FilterTasksAuth extends OncePerRequestFilter {
 
         var servletPath = request.getServletPath();
 
-        if (servletPath.equals("/tasks/")) {
+        if (servletPath.startsWith("/tasks/")) {
             // Pegar a autenticação (usuário e senha)
             var authorization = request.getHeader("Authorization");
 

@@ -2,17 +2,15 @@ package br.com.eboscatto.todolist.controller;
 
 import br.com.eboscatto.todolist.model.TaskModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
-import ch.qos.logback.core.net.SyslogOutputStream;
+import br.com.eboscatto.todolist.utils.Utils;
 import jakarta.servlet.http.HttpServletRequest;
-import org.hibernate.type.descriptor.java.UUIDJavaType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.rmi.server.UID;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -43,5 +41,23 @@ public class TaskController {
 
         var task = this.taskRepository.save(taskModel);
         return ResponseEntity.status(HttpStatus.OK).body(task);
+    }
+
+    @GetMapping("/")
+    public List<TaskModel> list(HttpServletRequest request) {
+
+        var idUser = request.getAttribute("idUser");
+        var tasks = this.taskRepository.findByIdUser((UUID) idUser);
+        return tasks;
+    }
+
+    @PutMapping("/{id}")
+    public TaskModel update(@RequestBody TaskModel taskModel, HttpServletRequest request, @PathVariable UUID id ) {
+
+        var task = this.taskRepository.findById(id).orElse(null);
+
+        Utils.copyNonNullProperties(taskModel, task);
+
+        return this.taskRepository.save(task);
     }
 }
