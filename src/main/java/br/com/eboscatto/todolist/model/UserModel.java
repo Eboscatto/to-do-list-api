@@ -1,6 +1,8 @@
 package br.com.eboscatto.todolist.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -12,14 +14,28 @@ import java.util.UUID;
 
 public class UserModel {
     @Id
-    @GeneratedValue(generator = "UUID") //Gerencia o Id
-    private UUID id; // Mais seguro do que um Id sequencial
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(unique = true)
+    @NotBlank(message = "O nome de usuário é obrigatório")
+    @Size(min = 3, max = 50, message = "O nome de usuário deve ter entre 3 e 50 caracteres")
+    @Column(unique = true, nullable = false)
     private String userName;
-    private String name;
-    private String password;
 
-    @CreationTimestamp // Cria automaticamente os dados de data e hora
+    @NotBlank(message = "O nome de usuário é obrigatório")
+    @Size(min = 3, max = 50, message = "O nome de usuário deve ter entre 3 e 50 caracteres")
+    @Column(unique = true, nullable = false)
+    private String name;
+
+    @NotBlank(message = "A senha é obrigatória")
+    @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres")
+    @Column(nullable = false)
+    private String password;
+    @Column(nullable = false)
     private LocalDateTime createdAt;
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
 }

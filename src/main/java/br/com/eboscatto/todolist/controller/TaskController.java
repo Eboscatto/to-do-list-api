@@ -1,9 +1,13 @@
 package br.com.eboscatto.todolist.controller;
 
+import br.com.eboscatto.todolist.authentication.JwtUtil;
 import br.com.eboscatto.todolist.model.TaskModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
-import br.com.eboscatto.todolist.utils.Utils;
+import br.com.eboscatto.todolist.repository.IUserRepository;
+import br.com.eboscatto.todolist.authentication.JwtUtil;
+import br.com.eboscatto.todolist.service.TaskService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
@@ -20,59 +23,33 @@ public class TaskController {
     @Autowired
     private ITaskRepository taskRepository;
 
-    @PostMapping("/")
-    public ResponseEntity create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
+    @Autowired
+    private IUserRepository userRepository;
 
-        // Atribui id de usuário autenticado à tarefa
+    @Autowired
+    private TaskService taskService;
 
-        var idUser = request.getAttribute("idUser");
-        taskModel.setIdUser((UUID) idUser);
+    @PostMapping
+    public ResponseEntity<?> createTask(@Valid @RequestBody TaskModel task,
+                                        @RequestHeader("Authorization") String token) {
+        // extrai o username do token
+        String username = JwtUtil.validateToken(token.replace("Bearer ", ""));
+        var user = userRepository.findByUserName(username);
 
-        var currentDate = LocalDateTime.now();
-        if (taskModel.getStartAt() == null || taskModel.getStartAt().isAfter(taskModel.getEndAt())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("A data de início é obrigatória e menor que a data de término!");
-        }
+        // vincula a tarefa ao usuário logado
+        task.setIdUser(user.getId());
 
-        if (currentDate.isAfter(taskModel.getStartAt())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("A data de início deve ser maior do que a data atual!");
-        }
+        var taskCreated = taskRepository.save(task);
+        return ResponseEntity.status(HttpStatus.CREATED).body(taskCreated);
+    }
+    @GetMapping
+    public ResponseEntity<?> listTasks(@RequestHeader("Authorization") String token) {
+        String username = JwtUtil.validateToken(token.replace("Bearer ", ""));
+        var user = userRepository.findByUserName(username);
 
-        var task = this.taskRepository.save(taskModel);
-        return ResponseEntity.status(HttpStatus.OK).body(task);
+        // agora o método bate com o atributo idUser
+        var tasks = taskRepository.findByIdUser(user.getId()); // agora funciona, ambos são Long
+        return ResponseEntity.ok(tasks);
     }
 
-    @GetMapping("/")
-    public List<TaskModel> list(HttpServletRequest request) {
-
-        var idUser = request.getAttribute("idUser");
-        var tasks = this.taskRepository.findByIdUser((UUID) idUser);
-        return tasks;
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity update(@RequestBody TaskModel taskModel, HttpServletRequest request, @PathVariable UUID id ) {
-
-        var task = this.taskRepository.findById(id).orElse(null);
-
-        if (task == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Tarefa não encontrada!");
-        }
-
-        var idUser = request.getAttribute("idUser");
-
-        if (!task.getIdUser().equals(idUser)) {
-
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("A tarefa não pertence ao usuário informado!");
-        }
-
-        Utils.copyNonNullProperties(taskModel, task);
-
-        var taskUpdated = this.taskRepository.save(task);
-
-        return ResponseEntity.ok().body(taskUpdated);
-    }
 }

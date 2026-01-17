@@ -11,73 +11,56 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Base64;
-
 @Component
-
 public class FilterTasksAuth extends OncePerRequestFilter {
 
     @Autowired
     private IUserRepository iUserRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
         var servletPath = request.getServletPath();
 
         if (servletPath.startsWith("/tasks/")) {
-            // Pegar a autenticação (usuário e senha)
             var authorization = request.getHeader("Authorization");
 
-            // Receber as credenciais em BASiC64
+            if (authorization == null || !authorization.startsWith("Basic ")) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header");
+                return;
+            }
+
             var authEncoded = authorization.substring("Basic".length()).trim();
-
-            // Gerar um Array de caracteres somente do BASIC64
             byte[] authDecode = Base64.getDecoder().decode(authEncoded);
-
-            // Receber o Array com as credenciais
             var authString = new String(authDecode);
 
-            // Separando o Array em duas partes:
-            // usuário / senha ["eboscatto", "1234']
             String[] credentials = authString.split(":");
+            if (credentials.length != 2) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Basic Auth format");
+                return;
+            }
+
             String userName = credentials[0];
             String password = credentials[1];
 
-            // Verificar a saída se usuário de fato existe e se a senha está correta
-
-        /*
-        System.out.println("Authorization");
-        System.out.println(userName);
-        System.out.println(password);
-        */
-
-
-            // Pega somente a parte da senha do Basic e remove todos os espaços
-            // authorization.substring("Basic".length()).trim();
-
-
-            // Validar usuário se usuário existe
             var user = this.iUserRepository.findByUserName(userName);
             if (user == null) {
-                response.sendError(401);
-            } else {
-                // Validar senha
-                var passwordVerify = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
-
-                if (passwordVerify.verified) {
-                    request.setAttribute("idUser", user.getId());
-                    filterChain.doFilter(request, response);
-                } else {
-                    response.sendError(401);
-                }
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+                return;
             }
 
+            var passwordVerify = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
+            if (passwordVerify.verified) {
+                request.setAttribute("idUser", user.getId());
+                filterChain.doFilter(request, response);
+            } else {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid password");
+            }
         } else {
-
             filterChain.doFilter(request, response);
         }
     }
 }
-
-
