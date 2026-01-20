@@ -4,18 +4,15 @@ import br.com.eboscatto.todolist.authentication.JwtUtil;
 import br.com.eboscatto.todolist.model.TaskModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
 import br.com.eboscatto.todolist.repository.IUserRepository;
-import br.com.eboscatto.todolist.authentication.JwtUtil;
 import br.com.eboscatto.todolist.service.TaskService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
@@ -51,5 +48,4 @@ public class TaskController {
         var tasks = taskRepository.findByIdUser(user.getId()); // agora funciona, ambos são Long
         return ResponseEntity.ok(tasks);
     }
-
 }

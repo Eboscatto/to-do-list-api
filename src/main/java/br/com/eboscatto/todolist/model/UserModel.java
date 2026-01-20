@@ -4,10 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data //Insere os Getters e Setters
 @Entity(name = "tb_users")
@@ -35,6 +32,7 @@ public class UserModel {
     private LocalDateTime createdAt;
     @PrePersist
     protected void onCreate() {
+
         this.createdAt = LocalDateTime.now();
     }
 

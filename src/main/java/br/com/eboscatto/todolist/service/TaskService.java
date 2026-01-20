@@ -12,7 +12,6 @@ import java.util.List;
 
 @Service
 public class TaskService {
-
     @Autowired
     private ITaskRepository taskRepository;
 

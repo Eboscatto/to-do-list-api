@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+
 @Data
 @Entity(name = "tasks_tb")
 public class TaskModel {
