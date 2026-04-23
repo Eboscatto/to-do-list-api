@@ -1,25 +1,17 @@
 package br.com.eboscatto.todolist.authentication;
 
-import at.favre.lib.crypto.bcrypt.BCrypt;
-import br.com.eboscatto.todolist.repository.IUserRepository;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
-import java.util.Base64;
 import java.util.Collections;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
-
-    @Autowired
-    private IUserRepository iUserRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -27,42 +19,44 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        var servletPath = request.getServletPath();
+        String path = request.getServletPath();
 
-        if (servletPath.startsWith("/tasks/")) {
-            var authorization = request.getHeader("Authorization");
+        // Protege rotas /tasks
+        if (path.startsWith("/tasks")) {
 
-            if (authorization == null || !authorization.startsWith("Basic ")) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header");
+            String authHeader = request.getHeader("Authorization");
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                response.sendError(401, "Cabeçalho de autorização ausente ou inválido");
                 return;
             }
 
-            var authEncoded = authorization.substring("Basic".length()).trim();
-            byte[] authDecode = Base64.getDecoder().decode(authEncoded);
-            var authString = new String(authDecode);
+            try {
+                String token = authHeader.substring(7);
 
-            String[] credentials = authString.split(":");
-            if (credentials.length != 2) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Basic Auth format");
-                return;
-            }
+                // valida token e pega username
+                String username = JwtUtil.getUsername(token);
+                String userId = JwtUtil.getUserId(token);
 
-            String userName = credentials[0];
-            String password = credentials[1];
+                // cria autenticação no contexto do Spring
+                var authentication = new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        Collections.emptyList()
+                );
 
-            var user = this.iUserRepository.findByUserName(userName);
-            if (user == null) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
-                return;
-            }
+                SecurityContextHolder.clearContext();
+                SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            var passwordVerify = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
-            if (passwordVerify.verified) {
-                request.setAttribute("idUser", user.getId());
+                // opcional: colocar userId na request
+                request.setAttribute("userId", userId);
+
                 filterChain.doFilter(request, response);
-            } else {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid password");
+
+            } catch (Exception e) {
+                response.sendError(401, "Token inválido");
             }
+
         } else {
             filterChain.doFilter(request, response);
         }

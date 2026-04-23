@@ -37,12 +37,16 @@ public class TaskModel {
 
     private String priority;
 
-    @Column(name = "id_user")
-    private Long idUser;
+    @ManyToOne
+    @JoinColumn(name = "id_user", nullable = false)
+    private UserModel user;
 
     @CreationTimestamp
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    public void setUser(UserModel user) {
+        this.user = user;
+    }
     public void setTitle(String title) throws Exception {
 
         if (title.length() > 50) {
@@ -52,7 +56,5 @@ public class TaskModel {
         this.title = title;
 
     }
-    public void setUser(Long user) {
 
-    }
 }

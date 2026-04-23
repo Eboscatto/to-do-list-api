@@ -8,7 +8,10 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -37,17 +40,6 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userCreated);
     }
 
-    // Exibe também a senha do usuário
-
-    /*
-    @GetMapping
-    public ResponseEntity<?> listAll() {
-        var users = this.userRepository.findAll();
-        return ResponseEntity.ok(users);
-    }
-
-     */
-
     // Não exibe a senha do usuário
     @GetMapping
     public ResponseEntity<?> listAll() {
@@ -57,6 +49,26 @@ public class UserController {
                 .toList();
 
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> me(Authentication authentication) {
+        String username = authentication.getName();
+
+        UserModel user = userRepository.findByUserName(username);
+
+        if (user == null) {
+
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
+        }
+        var dto = new UserResponseDTO(
+                user.getId(),
+                user.getUserName(),
+                user.getName(),
+                user.getCreatedAt()
+        );
+
+        return ResponseEntity.ok(dto);
     }
 
 }

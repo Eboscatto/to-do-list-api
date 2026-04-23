@@ -1,6 +1,5 @@
 package br.com.eboscatto.todolist.authentication;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,26 +13,39 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // desabilita CSRF (ok para APIs REST)
+                .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
 
-                // autorizações
+                // JWT Sem sessão
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/h2-console/**").permitAll()
-
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/tasks").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/tasks").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // Protege tudo de tasks
+                        .requestMatchers("/tasks/**").authenticated()
+
+                        // Qualquer outra rota precisa de login
                         .anyRequest().authenticated()
                 )
 
-                // ESSENCIAL PARA O H2
+                // Registra o JWT FILTER
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.disable())
                 );

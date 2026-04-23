@@ -1,17 +1,24 @@
 package br.com.eboscatto.todolist.controller;
 
+import br.com.eboscatto.todolist.DTO.TaskRequestDTO;
+import br.com.eboscatto.todolist.DTO.TaskResponseDTO;
 import br.com.eboscatto.todolist.authentication.JwtUtil;
 import br.com.eboscatto.todolist.model.TaskModel;
+import br.com.eboscatto.todolist.model.UserModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
 import br.com.eboscatto.todolist.repository.IUserRepository;
 import br.com.eboscatto.todolist.service.TaskService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/tasks")
@@ -27,25 +34,81 @@ public class TaskController {
     private TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<?> createTask(@Valid @RequestBody TaskModel task,
-                                        @RequestHeader("Authorization") String token) {
-        // extrai o username do token
-        String username = JwtUtil.validateToken(token.replace("Bearer ", ""));
-        var user = userRepository.findByUserName(username);
+    public ResponseEntity<TaskResponseDTO> create(
+            @RequestBody @Valid TaskRequestDTO dto,
+            HttpServletRequest request) throws Exception {
 
-        // vincula a tarefa ao usuário logado
-        task.setIdUser(user.getId());
+        String userId = (String) request.getAttribute("userId");
 
-        var taskCreated = taskRepository.save(task);
-        return ResponseEntity.status(HttpStatus.CREATED).body(taskCreated);
+        Long userIdLong = Long.valueOf(userId);
+
+        UserModel user = userRepository.findById(userIdLong)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        TaskModel task = new TaskModel();
+        task.setTitle(dto.title());
+        task.setDescription(dto.description());
+        task.setStartAt(dto.startAt());
+        task.setEndAt(dto.endAt());
+        task.setPriority(dto.priority());
+        task.setUser(user);
+
+        taskRepository.save(task);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                new TaskResponseDTO(
+                        task.getId(),
+                        task.getTitle(),
+                        task.getDescription(),
+                        task.getStartAt(),
+                        task.getEndAt(),
+                        task.getPriority(),
+                        task.getCreatedAt()
+                )
+        );
     }
-    @GetMapping
-    public ResponseEntity<?> listTasks(@RequestHeader("Authorization") String token) {
-        String username = JwtUtil.validateToken(token.replace("Bearer ", ""));
-        var user = userRepository.findByUserName(username);
 
-        // agora o método bate com o atributo idUser
-        var tasks = taskRepository.findByIdUser(user.getId()); // agora funciona, ambos são Long
+    @GetMapping
+    public ResponseEntity<List<TaskResponseDTO>> list(Authentication authentication) {
+
+        String username = authentication.getName();
+        UserModel user = userRepository.findByUserName(username);
+
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
+        }
+
+        List<TaskResponseDTO> tasks = taskRepository.findByUser(user)
+                .stream()
+                .map(task -> new TaskResponseDTO(
+                        task.getId(),
+                        task.getTitle(),
+                        task.getDescription(),
+                        task.getStartAt(),
+                        task.getEndAt(),
+                        task.getPriority(),
+                        task.getCreatedAt()
+                ))
+                .toList();
+
         return ResponseEntity.ok(tasks);
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> delete(@PathVariable UUID id,
+                                         HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+
+        TaskModel task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!task.getUser().getId().toString().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão");
+        }
+
+        taskRepository.delete(task);
+
+        return ResponseEntity.ok("Exclusão realizada com sucesso");
+    }
+
 }

@@ -2,10 +2,14 @@ package br.com.eboscatto.todolist.service;
 
 import br.com.eboscatto.todolist.authentication.JwtUtil;
 import br.com.eboscatto.todolist.model.TaskModel;
+import br.com.eboscatto.todolist.model.UserModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
 import br.com.eboscatto.todolist.repository.IUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,18 +23,19 @@ public class TaskService {
     private IUserRepository userRepository;
 
     public TaskModel createTask(TaskModel task, String token) throws Exception {
+
         // extrai o username do token
-        String username = JwtUtil.validateToken(token.replace("Bearer ", ""));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
         var user = userRepository.findByUserName(username);
 
-        // vincula ao usuário logado
-        task.setIdUser(user.getId());
+        // vincula a tarefa ao usuário logado
+        task.setUser(user);
 
         return taskRepository.save(task);
     }
     public List<TaskModel> listTasks(String username) {
         var user = userRepository.findByUserName(username);
-        return taskRepository.findByIdUser(user.getId());
+        return taskRepository.findByUser(user);
     }
 }
 
