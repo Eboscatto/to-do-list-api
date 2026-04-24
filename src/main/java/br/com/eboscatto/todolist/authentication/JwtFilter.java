@@ -1,8 +1,10 @@
 package br.com.eboscatto.todolist.authentication;
 
+import br.com.eboscatto.todolist.repository.IUserRepository;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -10,10 +12,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+import static br.com.eboscatto.todolist.authentication.JwtUtil.getUserId;
 import static br.com.eboscatto.todolist.authentication.JwtUtil.getUsername;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private IUserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -39,14 +45,28 @@ public class JwtFilter extends OncePerRequestFilter {
                 // Extrai username do token
                 String username = getUsername(token);
 
-                // Cria autenticação
+                String userId = getUserId(token);
+
+                // Busca usuário no bando
+                var user = userRepository.findByUserName(username);
+
+                if (user == null) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Usuário não existe");
+                    return;
+                }
+
+                // Salva o ID no request
+                request.setAttribute("userId", user.getId().toString());
+                request.setAttribute("userId", userId);
+
+                // Seta autenticação no Spring
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido!");
                 return;
             }
         }

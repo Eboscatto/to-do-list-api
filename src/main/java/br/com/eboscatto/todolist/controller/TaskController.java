@@ -97,6 +97,53 @@ public class TaskController {
 
         return ResponseEntity.ok(tasks);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskResponseDTO> update(
+            @PathVariable UUID id,
+            @RequestBody @Valid TaskRequestDTO dto,
+            Authentication auth) throws Exception {
+
+        // Pega username do token
+        String username = auth.getName();
+
+        // Busca usuário no banco
+        UserModel user = userRepository.findByUserName(username);
+
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado");
+        }
+
+        // Busca tarefa
+        TaskModel task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        // Valida dono da tarefa
+        if (!task.getUser().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão");
+        }
+
+        // Atualiza
+        task.setTitle(dto.title());
+        task.setDescription(dto.description());
+        task.setStartAt(dto.startAt());
+        task.setEndAt(dto.endAt());
+        task.setPriority(dto.priority());
+
+        taskRepository.save(task);
+
+        return ResponseEntity.ok(
+                new TaskResponseDTO(
+                        task.getId(),
+                        task.getTitle(),
+                        task.getDescription(),
+                        task.getStartAt(),
+                        task.getEndAt(),
+                        task.getPriority(),
+                        task.getCreatedAt()
+                )
+        );
+    }
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable UUID id,
                                          Authentication auth) {
