@@ -38,11 +38,14 @@ public class JwtUtil {
 
     // retorna o userName
     public static String getUsername(String token) {
+
         return getClaims(token).getSubject();
     }
 
     // retorna o userId
     public static String getUserId(String token) {
+
         return getClaims(token).get("userId", String.class);
     }
+
 }

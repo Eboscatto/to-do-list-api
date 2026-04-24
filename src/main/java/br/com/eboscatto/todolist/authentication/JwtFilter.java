@@ -10,6 +10,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+import static br.com.eboscatto.todolist.authentication.JwtUtil.getUsername;
+
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -21,44 +23,34 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // Protege rotas /tasks
-        if (path.startsWith("/tasks")) {
+        // Só protege rotas privadas
+        if (path.startsWith("/tasks") || path.startsWith("/auth/me")) {
 
             String authHeader = request.getHeader("Authorization");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                response.sendError(401, "Cabeçalho de autorização ausente ou inválido");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header");
                 return;
             }
 
             try {
                 String token = authHeader.substring(7);
 
-                // valida token e pega username
-                String username = JwtUtil.getUsername(token);
-                String userId = JwtUtil.getUserId(token);
+                // Extrai username do token
+                String username = getUsername(token);
 
-                // cria autenticação no contexto do Spring
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        Collections.emptyList()
-                );
+                // Cria autenticação
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
 
-                SecurityContextHolder.clearContext();
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                // opcional: colocar userId na request
-                request.setAttribute("userId", userId);
-
-                filterChain.doFilter(request, response);
-
             } catch (Exception e) {
-                response.sendError(401, "Token inválido");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                return;
             }
-
-        } else {
-            filterChain.doFilter(request, response);
         }
+
+        filterChain.doFilter(request, response);
     }
 }

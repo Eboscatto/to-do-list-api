@@ -36,14 +36,16 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskResponseDTO> create(
             @RequestBody @Valid TaskRequestDTO dto,
-            HttpServletRequest request) throws Exception {
+            Authentication auth) throws Exception {
 
-        String userId = (String) request.getAttribute("userId");
+        // Vem do token JWT
+        String username = auth.getName();
 
-        Long userIdLong = Long.valueOf(userId);
+        UserModel user = userRepository.findByUserName(username);
 
-        UserModel user = userRepository.findById(userIdLong)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado");
+        }
 
         TaskModel task = new TaskModel();
         task.setTitle(dto.title());
@@ -71,7 +73,9 @@ public class TaskController {
     @GetMapping
     public ResponseEntity<List<TaskResponseDTO>> list(Authentication authentication) {
 
+        // Busca usuário autenticado
         String username = authentication.getName();
+
         UserModel user = userRepository.findByUserName(username);
 
         if (user == null) {
@@ -95,14 +99,16 @@ public class TaskController {
     }
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable UUID id,
-                                         HttpServletRequest request) {
+                                         Authentication auth) {
 
-        String userId = (String) request.getAttribute("userId");
+        // Vem do token
+        String username = auth.getName();
 
         TaskModel task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        if (!task.getUser().getId().toString().equals(userId)) {
+        // Valida o dono da tarefa
+        if (!task.getUser().getUserName().equals(username)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão");
         }
 

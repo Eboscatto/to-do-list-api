@@ -28,7 +28,7 @@ public class UserController {
 
         if (existingUser != null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Usuário já existe!"));
+                    .body(Map.of("Error", "Usuário já existe!"));
         }
 
         var passwordHashed = BCrypt.withDefaults()
