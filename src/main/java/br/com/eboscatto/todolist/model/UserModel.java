@@ -7,7 +7,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data //Insere os Getters e Setters
-@Entity(name = "tb_users")
+@Entity
+@Table(name = "tb_users")
 
 public class UserModel {
     @Id

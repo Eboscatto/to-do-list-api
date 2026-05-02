@@ -10,7 +10,8 @@ import java.util.UUID;
 
 
 @Data
-@Entity(name = "tasks_tb")
+@Entity
+@Table(name = "tasks_tb")
 public class TaskModel {
 
     @Id
