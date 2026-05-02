@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.authentication;
+package br.com.eboscatto.todolist.security;
 
 import br.com.eboscatto.todolist.model.UserModel;
 import io.jsonwebtoken.Claims;

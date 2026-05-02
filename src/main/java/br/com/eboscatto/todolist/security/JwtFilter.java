@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.authentication;
+package br.com.eboscatto.todolist.security;
 
 import br.com.eboscatto.todolist.repository.IUserRepository;
 import jakarta.servlet.*;
@@ -10,10 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
-import java.util.Collections;
-
-import static br.com.eboscatto.todolist.authentication.JwtUtil.getUserId;
-import static br.com.eboscatto.todolist.authentication.JwtUtil.getUsername;
+import static br.com.eboscatto.todolist.security.JwtUtil.getUserId;
+import static br.com.eboscatto.todolist.security.JwtUtil.getUsername;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -47,7 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 String userId = getUserId(token);
 
-                // Busca usuário no bando
+                // Busca usuário no banco
                 var user = userRepository.findByUserName(username);
 
                 if (user == null) {
@@ -60,8 +58,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 request.setAttribute("userId", userId);
 
                 // Seta autenticação no Spring
+                UserDetailsImpl userDetails = new UserDetailsImpl(user);
+
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 

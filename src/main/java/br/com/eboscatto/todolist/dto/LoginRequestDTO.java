@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.DTO;
+package br.com.eboscatto.todolist.dto;
 
 import lombok.Data;
 

@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.authentication;
+package br.com.eboscatto.todolist.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

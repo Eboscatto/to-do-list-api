@@ -1,12 +1,12 @@
 package br.com.eboscatto.todolist.service;
 
+import br.com.eboscatto.todolist.security.UserDetailsImpl;
 import br.com.eboscatto.todolist.model.TaskModel;
 import br.com.eboscatto.todolist.model.UserModel;
 import br.com.eboscatto.todolist.repository.ITaskRepository;
 import br.com.eboscatto.todolist.repository.IUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +23,10 @@ public class TaskService {
 
     @Autowired
     private IUserRepository userRepository;
+
+    private UserDetailsImpl getAuthenticatedUser(Authentication auth) {
+        return (UserDetailsImpl) auth.getPrincipal();
+    }
 
 
     // Buscar usuário
@@ -64,21 +68,25 @@ public class TaskService {
     }
 
     // Criar tarefa
-    public TaskModel createTask(TaskModel task, String username) {
+    public TaskModel createTask(TaskModel task, Authentication auth) {
 
-        UserModel user = getUserByUsername(username);
+        UserDetailsImpl user = getAuthenticatedUser(auth);
 
         validateConflict(user.getId(), task.getStartAt(), task.getEndAt());
 
-        task.setUser(user);
+        UserModel userEntity = new UserModel();
+        userEntity.setId(user.getId());
+
+        task.setUser(userEntity);
 
         return taskRepository.save(task);
     }
 
     // Atualizar tarefa
-    public TaskModel updateTask(UUID id, TaskModel updatedTask, String username) throws Exception {
+    public TaskModel updateTask(UUID id, TaskModel updatedTask, Authentication auth)
+            throws Exception {
 
-        UserModel user = getUserByUsername(username);
+        UserDetailsImpl user = getAuthenticatedUser(auth);
 
         TaskModel task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -86,7 +94,6 @@ public class TaskService {
                         "Tarefa não encontrada"
                 ));
 
-        // Validar que a tarefa pertence ao usuário
         if (!task.getUser().getId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão");
         }
@@ -102,34 +109,26 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-
     // Listar tarefas
-    public List<TaskModel> listTasks(String username) {
-        UserModel user = getUserByUsername(username);
-        return taskRepository.findByUser(user);
+    public List<TaskModel> listTasks(Authentication auth) {
+
+        UserDetailsImpl user = (UserDetailsImpl) auth.getPrincipal();
+
+        UserModel userEntity = new UserModel();
+        userEntity.setId(user.getId());
+
+        return taskRepository.findByUser(userEntity);
     }
-
-
     // Deletar tarefa
     public void deleteTask(UUID id, Authentication auth) {
 
-        String username = auth.getName();
-
-        UserModel user = Optional.ofNullable(userRepository.findByUserName(username))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Usuário não encontrado"
-                ));
+        UserDetailsImpl user = (UserDetailsImpl) auth.getPrincipal();
 
         TaskModel task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Tarefa não encontrada"
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        // Comparação correta
         if (!task.getUser().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sem permissão");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         taskRepository.delete(task);

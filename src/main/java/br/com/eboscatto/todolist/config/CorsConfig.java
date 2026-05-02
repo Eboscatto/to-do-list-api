@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.utils;
+package br.com.eboscatto.todolist.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -15,7 +15,7 @@ public class CorsConfig {
                         .allowedOrigins("http://localhost:3000")
                         .allowCredentials(true)
                         .allowedHeaders("*")
-                        .allowedMethods("*");
+                        .allowedMethods("GET", "POST", "PUT", "DELETE");
             }
         };
     }

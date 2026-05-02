@@ -1,10 +1,8 @@
 package br.com.eboscatto.todolist.controller;
 
-import br.com.eboscatto.todolist.DTO.TaskRequestDTO;
-import br.com.eboscatto.todolist.DTO.TaskResponseDTO;
+import br.com.eboscatto.todolist.dto.TaskRequestDTO;
+import br.com.eboscatto.todolist.dto.TaskResponseDTO;
 import br.com.eboscatto.todolist.model.TaskModel;
-import br.com.eboscatto.todolist.repository.ITaskRepository;
-import br.com.eboscatto.todolist.repository.IUserRepository;
 import br.com.eboscatto.todolist.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +17,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
-
-    @Autowired
-    private ITaskRepository taskRepository;
-
-    @Autowired
-    private IUserRepository userRepository;
-
     @Autowired
     private TaskService taskService;
 
@@ -41,35 +32,17 @@ public class TaskController {
         task.setEndAt(dto.endAt());
         task.setPriority(dto.priority());
 
-        TaskModel saved = taskService.createTask(task, auth.getName());
+        TaskModel saved = taskService.createTask(task, auth);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                new TaskResponseDTO(
-                        task.getId(),
-                        task.getTitle(),
-                        task.getDescription(),
-                        task.getStartAt(),
-                        task.getEndAt(),
-                        task.getPriority(),
-                        task.getCreatedAt()
-                )
-        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(saved));
     }
 
     @GetMapping
     public ResponseEntity<List<TaskResponseDTO>> list(Authentication auth) {
-        List<TaskModel> tasks = taskService.listTasks(auth.getName());
 
-        List<TaskResponseDTO> response = tasks.stream()
-                .map(task -> new TaskResponseDTO(
-                        task.getId(),
-                        task.getTitle(),
-                        task.getDescription(),
-                        task.getStartAt(),
-                        task.getEndAt(),
-                        task.getPriority(),
-                        task.getCreatedAt()
-                ))
+        List<TaskResponseDTO> response = taskService.listTasks(auth)
+                .stream()
+                .map(this::toDTO)
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -90,20 +63,10 @@ public class TaskController {
         TaskModel updated = taskService.updateTask(
                 id,
                 task,
-                auth.getName()
+                auth
         );
 
-        return ResponseEntity.ok(
-                new TaskResponseDTO(
-                        updated.getId(),
-                        updated.getTitle(),
-                        updated.getDescription(),
-                        updated.getStartAt(),
-                        updated.getEndAt(),
-                        updated.getPriority(),
-                        updated.getCreatedAt()
-                )
-        );
+        return ResponseEntity.ok(toDTO(updated));
     }
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable UUID id,
@@ -111,6 +74,18 @@ public class TaskController {
         taskService.deleteTask(id, auth);
 
         return ResponseEntity.noContent().build();
+    }
+
+    private TaskResponseDTO toDTO(TaskModel task) {
+        return new TaskResponseDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStartAt(),
+                task.getEndAt(),
+                task.getPriority(),
+                task.getCreatedAt()
+        );
     }
 
 }

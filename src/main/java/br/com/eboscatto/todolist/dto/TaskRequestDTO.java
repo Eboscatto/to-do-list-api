@@ -1,4 +1,4 @@
-package br.com.eboscatto.todolist.DTO;
+package br.com.eboscatto.todolist.dto;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;

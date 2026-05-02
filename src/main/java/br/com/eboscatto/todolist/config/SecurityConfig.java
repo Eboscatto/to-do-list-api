@@ -1,5 +1,6 @@
-package br.com.eboscatto.todolist.authentication;
+package br.com.eboscatto.todolist.config;
 
+import br.com.eboscatto.todolist.security.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
