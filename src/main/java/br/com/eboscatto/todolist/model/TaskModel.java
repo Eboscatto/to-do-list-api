@@ -30,7 +30,7 @@ public class TaskModel {
 
     @Future(message = "A data de término deve ser no futuro")
     private LocalDateTime endAt;
-    @AssertTrue(message = "A data de início deve ser antes da data de término")
+    @AssertTrue(message = "A data de início deve ser anterior a data de término")
     public boolean isStartBeforeEnd() {
         if (startAt == null || endAt == null) return true;
         return startAt.isBefore(endAt);
